@@ -12,11 +12,11 @@ import java.util.Optional;
 
 import static java.util.stream.Collectors.joining;
 
-public abstract class CRUDRepositoryNoReflectionsAPI<T extends Entity> {
+public abstract class CrudRepositoryNoReflectionsAPI<T extends Entity> {
 
     protected Connection connection; // protected so can be seen by subclasses in package
 
-    public CRUDRepositoryNoReflectionsAPI(Connection connection) {
+    public CrudRepositoryNoReflectionsAPI(Connection connection) {
         this.connection = connection;
     }
 

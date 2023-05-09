@@ -1,18 +1,25 @@
 package com.bather.philippa.peopledb.model;
 
+import com.bather.philippa.peopledb.annotation.Id;
+
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.Objects;
+import java.util.Optional;
 
-public class Person implements Entity {
+public class Person {
+    @Id
     private Long id;
+
     private String firstName;
     private String lastName;
     private ZonedDateTime dob;
     private BigDecimal salary = new BigDecimal("0.00");
+    private String email;
+    private Optional<Address> homeAddress = Optional.empty();
 
 
-    public Person(long id, String firstName, String lastName, ZonedDateTime dob, BigDecimal salary) {
+    public Person(Long id, String firstName, String lastName, ZonedDateTime dob, BigDecimal salary) {
         this(id, firstName, lastName, dob);
         this.salary = salary;
     }
@@ -26,13 +33,10 @@ public class Person implements Entity {
         this.dob = dob;
     }
 
-
-    @Override
     public Long getId() {
         return id;
     }
 
-    @Override
     public void setId(Long id) {
         this.id = id;
     }
@@ -69,6 +73,22 @@ public class Person implements Entity {
         this.salary = salary;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setHomeAddress(Address homeAddress) {
+        this.homeAddress = Optional.ofNullable(homeAddress);
+    }
+
+    public Optional<Address> getHomeAddress() {
+        return homeAddress;
+    }
+
     @Override
     public String toString() {
         return "Person{" +
@@ -91,4 +111,5 @@ public class Person implements Entity {
     public int hashCode() {
         return Objects.hash(id, firstName, lastName);
     }
+
 }

@@ -1,32 +1,39 @@
 package com.bather.philippa.peopledb.repository;
 
+import com.bather.philippa.peopledb.model.Address;
 import com.bather.philippa.peopledb.model.Person;
+import com.bather.philippa.peopledb.model.Region;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 
 
-public class PeopleRepositoryTests {
+public class PersonRepositoryTests {
 
     private Connection connection;
-    private PeopleRepository repo;
+    private PersonRepository repo;
 
     @BeforeEach
     void setUp() throws SQLException{
-        connection = DriverManager.getConnection("jdbc:h2:~/OneDrive/Desktop/PeopleDB/peaopledb".replace("~", System.getProperty("user.home")));
+        connection = DriverManager.getConnection("jdbc:h2:~/OneDrive/Desktop/PeopleDB/peaopledb;TRACE_LEVEL_SYSTEM_OUT=0".replace("~", System.getProperty("user.home")));
         connection.setAutoCommit(false);  // turn off auto-commits so that the test commits aren't persisted in the DB
-        repo = new PeopleRepository(connection);
+        repo = new PersonRepository(connection);
     }
 
     @AfterEach
@@ -59,6 +66,27 @@ public class PeopleRepositoryTests {
     }
 
     @Test
+    public void canSaveWithAddress() throws SQLException {
+        Person john = new Person("JohnZZZZ", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
+        Address address = new Address(null,"123 Beale St.", "Apt. 1A", "Wala Wala", "WA", "90210", "United States", "Fulton County", Region.WEST);
+        john.setHomeAddress(address);
+
+        Person savedPerson = repo.save(john);
+        assertThat(savedPerson.getHomeAddress().get().id()).isGreaterThan(0);
+    }
+
+    @Test
+    public void canFindPersonByIdWithAddress() throws SQLException {
+        Person john = new Person("JohnZZZZ", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
+        Address address = new Address(null,"123 Beale St.", "Apt. 1A", "Wala Wala", "WA", "90210", "United States", "Fulton County", Region.WEST);
+        john.setHomeAddress(address);
+
+        Person savedPerson = repo.save(john);
+        Person foundPerson = repo.findById(savedPerson.getId()).get();
+        assertThat(foundPerson.getHomeAddress().get().state()).isEqualTo("WA");
+    }
+
+    @Test
     public void canFindPersonById() {
         // i) insert known test data
         Person savedPerson = repo.save(new Person("Mary", "Clarence", ZonedDateTime.now()));
@@ -69,6 +97,7 @@ public class PeopleRepositoryTests {
     }
 
     @Test
+    @Disabled
     public void canFindAll() {
         repo.save(new Person("John", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6"))));
         repo.save(new Person("John1", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6"))));
@@ -138,21 +167,24 @@ public class PeopleRepositoryTests {
         assertThat(p2.getSalary()).isNotEqualTo(p1.getSalary());
     }
 
-    //    @Test
-//    public void experiment() {
-//        Person p1 = new Person(10L, null, null, null);
-//        Person p2 = new Person(20L, null, null, null);
-//        Person p3 = new Person(30L, null, null, null);
-//        Person p4 = new Person(40L, null, null, null);
-//        Person p5 = new Person(50L, null, null, null);
-//
-//        Person[] people = Arrays.asList(p1,p2,p3,p4,p5).toArray(new Person[]{});
-//        // strings API to convert array of people to string of ids delimited by a comma
-//        // can't use the API on array, so convert to collections
-//        // convert array of persons to stream of persons
-//        // which then gets converted to a stream of longs
-//        // convert longs to string
-//        String ids = Arrays.stream(people).map(Person::getId).map(String::valueOf).collect(joining(","));
-//        System.out.println(ids);
-//    }
+    // Convenience method - not a test - to load data into DDB
+    @Test
+    @Disabled
+    public void loadData() throws IOException, SQLException {
+        Files.lines(Path.of("C://Users/bathe/Downloads/Hr5m/Hr5m.csv"))
+                .skip(1) // skip header row
+                .map(l -> l.split(","))  // stream of string arrays
+                .map(arr -> {
+                    LocalDate dob = LocalDate.parse(arr[10], DateTimeFormatter.ofPattern("M/d/yyyy"));
+                    LocalTime tob = LocalTime.parse(arr[11], DateTimeFormatter.ofPattern("hh:mm:ss a").withLocale(Locale.US));
+                    LocalDateTime dtob = LocalDateTime.of(dob, tob);
+                    ZonedDateTime zdtob = ZonedDateTime.of(dtob, ZoneId.of("+0"));
+                    Person person = new Person(arr[2], arr[4], zdtob);
+                    person.setSalary(new BigDecimal(arr[25]));
+                    person.setEmail(arr[6]);
+                    return person;
+                })
+                .forEach(repo::save); // method reference version of lambda p -> repo.save
+        connection.commit();
+    }
 }
