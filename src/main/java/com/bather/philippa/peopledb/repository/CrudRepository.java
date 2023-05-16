@@ -37,6 +37,7 @@ public abstract class CrudRepository<T> {
             while (rs.next()) {
                 long id = rs.getLong(1); // get first column back
                 setIdByAnnotation(id, entity);
+                postSave(entity, id);
             }
 //            System.out.format("Records affected: %d%n", recordsAffected);
         } catch (SQLException e){
@@ -85,7 +86,6 @@ public abstract class CrudRepository<T> {
             PreparedStatement ps = connection.prepareStatement(getSqlByAnnotation(CrudOperation.COUNT, this::getCountIdSql));
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                // or, if ps SELECT COUNT(ID) FROM TABLE, the columnLabel would be 1
                 count = rs.getLong("COUNT");
             }
         } catch (SQLException e) {
@@ -186,6 +186,7 @@ public abstract class CrudRepository<T> {
     }
 
     protected String getSaveSql() { throw new RuntimeException("SQL not defined.");}
+    protected void postSave(T entity, long id) { }
 
     /**
      * @return Returns a String that represents a SQL needed to retrieve one entity.

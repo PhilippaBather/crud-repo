@@ -4,8 +4,10 @@ import com.bather.philippa.peopledb.annotation.Id;
 
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public class Person {
     @Id
@@ -17,7 +19,11 @@ public class Person {
     private BigDecimal salary = new BigDecimal("0.00");
     private String email;
     private Optional<Address> homeAddress = Optional.empty();
+    private Optional<Address> businessAddress = Optional.empty();
 
+    private Optional<Person> spouse = Optional.empty();
+    private Set<Person> children = new HashSet<>();
+    private Optional<Person> parent = Optional.empty();
 
     public Person(Long id, String firstName, String lastName, ZonedDateTime dob, BigDecimal salary) {
         this(id, firstName, lastName, dob);
@@ -89,6 +95,38 @@ public class Person {
         return homeAddress;
     }
 
+    public void setBusinessAddress(Address businessAddress) {
+        this.businessAddress = Optional.ofNullable(businessAddress);
+    }
+
+    public Optional<Address> getBusinessAddress() {
+        return businessAddress;
+    }
+
+    public Optional<Person> getSpouse() {
+        return spouse;
+    }
+
+    public void setSpouse(Person spouse) {
+        this.spouse = Optional.ofNullable(spouse);
+    }
+    public void addChild(Person child) {
+        children.add(child);
+        child.setParent(this);
+    }
+
+    public Set<Person> getChildren() {
+        return children;
+    }
+
+    public void setParent(Person parent) {
+        this.parent = Optional.ofNullable(parent);
+    }
+
+    public Optional<Person> getParent() {
+        return parent;
+    };
+
     @Override
     public String toString() {
         return "Person{" +
@@ -111,5 +149,4 @@ public class Person {
     public int hashCode() {
         return Objects.hash(id, firstName, lastName);
     }
-
 }

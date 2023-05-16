@@ -3,6 +3,7 @@ package com.bather.philippa.peopledb.repository;
 import com.bather.philippa.peopledb.model.Address;
 import com.bather.philippa.peopledb.model.Person;
 import com.bather.philippa.peopledb.model.Region;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -15,12 +16,15 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.SQLOutput;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.*;
 
 
@@ -66,7 +70,16 @@ public class PersonRepositoryTests {
     }
 
     @Test
-    public void canSaveWithAddress() throws SQLException {
+    public void canSaveSpouse() {
+        Person person = new Person("John", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
+        Person spouse = new Person("Bobby", "Smith", ZonedDateTime.of(1982, 3, 5, 20, 15, 0, 0, ZoneId.of("-6")));
+        person.setSpouse(spouse);
+        Person savedPerson = repo.save(person);
+        assertThat(savedPerson.getSpouse().get().getId()).isGreaterThan(0);
+    }
+
+    @Test
+    public void canSavePersonWithHomeAddress() throws SQLException {
         Person john = new Person("JohnZZZZ", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
         Address address = new Address(null,"123 Beale St.", "Apt. 1A", "Wala Wala", "WA", "90210", "United States", "Fulton County", Region.WEST);
         john.setHomeAddress(address);
@@ -76,7 +89,17 @@ public class PersonRepositoryTests {
     }
 
     @Test
-    public void canFindPersonByIdWithAddress() throws SQLException {
+    public void canSavePersonWithBusinessAddress() throws SQLException {
+        Person john = new Person("JohnZZZZ", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
+        Address address = new Address(null,"123 Beale St.", "Apt. 1A", "Wala Wala", "WA", "90210", "United States", "Fulton County", Region.WEST);
+        john.setBusinessAddress(address);
+
+        Person savedPerson = repo.save(john);
+        assertThat(savedPerson.getBusinessAddress().get().id()).isGreaterThan(0);
+    }
+
+    @Test
+    public void canFindPersonByIdWithHomeAddress() throws SQLException {
         Person john = new Person("JohnZZZZ", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
         Address address = new Address(null,"123 Beale St.", "Apt. 1A", "Wala Wala", "WA", "90210", "United States", "Fulton County", Region.WEST);
         john.setHomeAddress(address);
@@ -84,6 +107,41 @@ public class PersonRepositoryTests {
         Person savedPerson = repo.save(john);
         Person foundPerson = repo.findById(savedPerson.getId()).get();
         assertThat(foundPerson.getHomeAddress().get().state()).isEqualTo("WA");
+    }
+
+    @Test
+    public void canFindPersonByIdWithBusinessAddress() throws SQLException {
+        Person john = new Person("JohnZZZZ", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
+        Address address = new Address(null,"123 Beale St.", "Apt. 1A", "Wala Wala", "WA", "90210", "United States", "Fulton County", Region.WEST);
+        john.setBusinessAddress(address);
+
+        Person savedPerson = repo.save(john);
+        Person foundPerson = repo.findById(savedPerson.getId()).get();
+        assertThat(foundPerson.getBusinessAddress().get().state()).isEqualTo("WA");
+    }
+
+    @Test
+    public void canSavePersonWithChildren() throws SQLException {
+        Person john = new Person("John", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
+        john.addChild(new Person("Johnny", "Smith", ZonedDateTime.of(2010, 1, 1, 1, 0, 0, 0, ZoneId.of("-6"))));
+        john.addChild(new Person("Sarah", "Smith", ZonedDateTime.of(2012, 3, 1, 1, 0, 0, 0, ZoneId.of("-6"))));
+        john.addChild(new Person("Jenny", "Smith", ZonedDateTime.of(2014, 5, 1, 1, 0, 0, 0, ZoneId.of("-6"))));
+
+        Person savedPerson = repo.save(john);
+        savedPerson.getChildren().stream().map(Person::getId).forEach(id -> assertThat(id).isGreaterThan(0));
+    }
+
+    @Test
+    public void canFindPersonByIdWithChildren() {
+        Person john = new Person("John", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6")));
+        john.addChild(new Person("Johnny", "Smith", ZonedDateTime.of(2010, 1, 1, 1, 0, 0, 0, ZoneId.of("-6"))));
+        john.addChild(new Person("Sarah", "Smith", ZonedDateTime.of(2012, 3, 1, 1, 0, 0, 0, ZoneId.of("-6"))));
+        john.addChild(new Person("Jenny", "Smith", ZonedDateTime.of(2014, 5, 1, 1, 0, 0, 0, ZoneId.of("-6"))));
+
+        Person savedPerson = repo.save(john);
+        Person foundPerson = repo.findById(savedPerson.getId()).get();
+        assertThat(foundPerson.getChildren().stream().map(Person::getFirstName).collect(toSet()))
+                .contains("Johnny", "Sarah", "Jenny");
     }
 
     @Test
