@@ -31,7 +31,12 @@ public class PersonRepository extends CrudRepository<Person> {
             LEFT OUTER JOIN ADDRESSES AS HOME ON PARENT.HOME_ADDRESS=HOME.ID
             LEFT OUTER JOIN ADDRESSES AS BUSINESS ON PARENT.BUSINESS_ADDRESS=BUSINESS.ID
             WHERE PARENT.ID=?""";
-    private static final String FIND_ALL_SQL = "SELECT * FROM PEOPLE";
+    private static final String FIND_ALL_SQL = """
+            SELECT
+            PARENT.ID AS PARENT_ID, PARENT.FIRST_NAME AS PARENT_FIRST_NAME, PARENT.LAST_NAME AS PARENT_LAST_NAME, PARENT.DOB AS PARENT_DOB, PARENT.SALARY AS PARENT_SALARY, PARENT.EMAIL AS PARENT_EMAIL
+            FROM PEOPLE AS PARENT
+            FETCH FIRST 100 ROWS ONLY
+            """;
     private static final String SELECT_COUNT_SQL = "SELECT COUNT(ID) AS COUNT FROM PEOPLE";
     private static final String DELETE_RECORD_SQL = "DELETE FROM PEOPLE WHERE ID=?";
     private static final String DELETE_N_RECORDS_SQL = "DELETE FROM PEOPLE WHERE ID IN (:ids)";
@@ -108,34 +113,35 @@ public class PersonRepository extends CrudRepository<Person> {
         Person parent = null;
 
         do {
-            Person curParent = extractPerson(rs, "PARENT_");
+            Person curParent = extractPerson(rs, "PARENT_").get();
             if (parent == null) {
                 parent = curParent;
             } else if (!parent.equals(curParent)) {
-                // TODO
+                rs.previous(); // back up row cursor 1
+                break;
             }
 
-            Person child = extractPerson(rs, "CHILD_");
+            Optional<Person> child = extractPerson(rs, "CHILD_");
 
             Address homeAddress = extractAddress(rs, "HOME_");
             Address businessAddress = extractAddress(rs, "BUSINESS_");
 
             parent.setHomeAddress(homeAddress);
             parent.setBusinessAddress(businessAddress);
-            parent.addChild(child);
-
+            child.ifPresent(parent::addChild);
         } while (rs.next());
         return parent;
     }
 
-    private Person extractPerson(ResultSet rs, String aliasPrefix) throws SQLException {
-        long personId = getValueByAlias(aliasPrefix + "ID", rs, Long.class);  // or use column index
+    private Optional<Person> extractPerson(ResultSet rs, String aliasPrefix) throws SQLException {
+        Long personId = getValueByAlias(aliasPrefix + "ID", rs, Long.class);  // or use column index
+        if (personId == null) { return Optional.empty(); }
         String firstName = getValueByAlias(aliasPrefix + "FIRST_NAME", rs, String.class);
         String lastName = getValueByAlias(aliasPrefix + "LAST_NAME", rs, String.class);
         ZonedDateTime dob = ZonedDateTime.of(getValueByAlias(aliasPrefix + "DOB", rs, Timestamp.class).toLocalDateTime(), ZoneId.of("+0"));
         BigDecimal salary = getValueByAlias(aliasPrefix + "SALARY", rs, BigDecimal.class);
         Person person = new Person(personId, firstName, lastName, dob, salary);
-        return person;
+        return Optional.of(person);
     }
 
     private Address extractAddress(ResultSet rs, String aliasPrefix) throws SQLException {
@@ -160,7 +166,8 @@ public class PersonRepository extends CrudRepository<Person> {
                 return (T) rs.getObject(colIdx);
             }
         }
-        throw new SQLException(String.format("Column not found for alias: '%s'.%n", alias));
+//        throw new SQLException(String.format("Column not found for alias: '%s'.%n", alias));
+        return null;
     }
 
     private Timestamp convertDobToTimestamp(ZonedDateTime dob) {

@@ -155,7 +155,6 @@ public class PersonRepositoryTests {
     }
 
     @Test
-    @Disabled
     public void canFindAll() {
         repo.save(new Person("John", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6"))));
         repo.save(new Person("John1", "Smith", ZonedDateTime.of(1980, 11, 15, 15, 15, 0, 0, ZoneId.of("-6"))));
